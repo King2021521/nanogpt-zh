@@ -10,7 +10,7 @@
 
 ### 1️⃣ 克隆项目
 ```bash
-git clone https://github.com/your-username/nanogpt-zh.git
+git clone https://github.com/King2021521/nanogpt-zh.git
 cd nanogpt-zh
 ```
 
