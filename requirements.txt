@@ -1,0 +1,27 @@
+# NanoGPT-ZH - A Tiny GPT Implementation from Scratch for Chinese
+# 从零手搓的中文GPT模型
+# @Author xiaomin.zhang
+# Version: 1.0.0
+
+# PyTorch核心库
+torch>=2.0.0
+torchvision>=0.15.0
+
+# 数据处理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 中文分词
+jieba>=0.42.1
+
+# 可视化和监控
+matplotlib>=3.7.0
+tensorboard>=2.13.0
+tqdm>=4.65.0
+
+# 工具库
+pyyaml>=6.0
+requests>=2.31.0
+
+# 可选：如果需要使用预训练tokenizer
+# transformers>=4.30.0

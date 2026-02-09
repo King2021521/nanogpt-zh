@@ -1,0 +1,105 @@
+# @Author xiaomin.zhang
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+!final_model.pt
+!best_model.pt
+
+# Checkpoints (保留目录结构但忽略内容)
+checkpoints/*.pt
+checkpoints/*.pth
+checkpoints/*.ckpt
+!checkpoints/.gitkeep
+
+# Logs
+logs/
+*.log
+events.out.tfevents.*
+
+# Data files
+data/raw/*
+data/processed/*.txt
+data/processed/*.json
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+*.xml
+*.xml.bz2
+*.json.gz
+*.tar.gz
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Documentation builds
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Model outputs
+outputs/
+results/
+generated_texts/
+
+# TensorBoard
+runs/
