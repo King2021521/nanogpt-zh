@@ -1086,7 +1086,7 @@ max_epochs = 20
 ## 📚 参考资料
 
 ### 相关文档
-- [快速开始](../QUICK_START.md)
+- [快速开始](QUICK_START.md)
 - [模型架构](TRANSFORMER_ARCHITECTURE.md)
 - [参数指南](MODEL_PARAMETERS_GUIDE.md)
 - [项目结构](PROJECT_STRUCTURE.md)
@@ -1124,6 +1124,6 @@ max_epochs = 20
 
 © 2026 | Made with ❤️ by xiaomin.zhang
 
-[返回首页](../README.md) | [快速开始](../QUICK_START.md) | [GitHub](https://github.com/King2021521/nanogpt-zh)
+[返回首页](../README.md) | [快速开始](QUICK_START.md) | [GitHub](https://github.com/King2021521/nanogpt-zh)
 
 </div>
