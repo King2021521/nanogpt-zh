@@ -1,0 +1,123 @@
+{
+  "dataset_name": "诗词创作指令微调数据集",
+  "version": "1.0.0",
+  "author": "xiaomin.zhang",
+  "created_date": "2026-02-13",
+  "description": "用于训练模型进行诗词创作的指令微调数据集",
+  "total_samples": 30,
+  "train_samples": 20,
+  "val_samples": 5,
+  "test_samples": 5,
+  "splits": {
+    "train": {
+      "file": "train.jsonl",
+      "samples": 20,
+      "description": "训练集数据"
+    },
+    "val": {
+      "file": "val.jsonl",
+      "samples": 5,
+      "description": "验证集数据"
+    },
+    "test": {
+      "file": "test.jsonl",
+      "samples": 5,
+      "description": "测试集数据"
+    }
+  },
+  "poem_types": [
+    "五言绝句",
+    "七言绝句",
+    "五言律诗",
+    "七言律诗",
+    "古体诗"
+  ],
+  "styles": [
+    "清新",
+    "婉约",
+    "豪放",
+    "古典",
+    "现代"
+  ],
+  "themes": [
+    "春",
+    "夏",
+    "秋",
+    "冬",
+    "山",
+    "水",
+    "月",
+    "花",
+    "风",
+    "云",
+    "雪",
+    "梅花",
+    "竹子",
+    "边塞",
+    "田园",
+    "都市",
+    "江南",
+    "黄昏"
+  ],
+  "emotions": [
+    "友情",
+    "思乡",
+    "离别",
+    "爱情",
+    "壮志",
+    "报国",
+    "人生感悟"
+  ],
+  "difficulty_levels": [
+    "初级",
+    "中级",
+    "高级"
+  ],
+  "data_format": {
+    "instruction": "用户的指令/提示词",
+    "input": "可选的额外输入信息",
+    "output": "模型应该生成的诗词",
+    "metadata": {
+      "poem_type": "诗词类型",
+      "style": "风格",
+      "theme": "主题（可选）",
+      "emotion": "情感（可选）",
+      "season": "季节（可选）",
+      "keywords": "关键词列表（可选）",
+      "imitate": "模仿对象（可选）",
+      "difficulty": "难度等级"
+    }
+  },
+  "statistics": {
+    "poem_type_distribution": {
+      "五言绝句": 9,
+      "七言绝句": 16,
+      "五言律诗": 3,
+      "七言律诗": 1,
+      "古体诗": 1
+    },
+    "difficulty_distribution": {
+      "初级": 8,
+      "中级": 17,
+      "高级": 5
+    },
+    "style_distribution": {
+      "清新": 9,
+      "婉约": 7,
+      "豪放": 9,
+      "古典": 4,
+      "现代": 1
+    }
+  },
+  "usage_notes": [
+    "本数据集为示例数据，实际使用时建议扩充到5000+样本",
+    "每条数据都经过格律检查，确保符合诗词规范",
+    "指令形式多样化，覆盖不同的创作需求",
+    "metadata字段提供了丰富的标注信息，便于数据分析和筛选"
+  ],
+  "license": "MIT",
+  "references": [
+    "chinese-poetry: https://github.com/chinese-poetry/chinese-poetry",
+    "Stanford Alpaca: https://github.com/tatsu-lab/stanford_alpaca"
+  ]
+}

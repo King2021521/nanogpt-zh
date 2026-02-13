@@ -1,215 +1,369 @@
+# @Author xiaomin.zhang
 """
-中文诗词数据集预处理脚本
-用于处理 chinese-poetry-collection 数据集
-@Author xiaomin.zhang
+诗词指令微调数据准备脚本
+用于加载、验证、处理和分析诗词创作训练数据
 """
 
-import os
-import csv
 import json
-from tqdm import tqdm
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import config
-from utils import Tokenizer
+import random
+from pathlib import Path
+from typing import List, Dict, Tuple
+from collections import Counter
+import re
 
 
-def load_poetry_csv(csv_path):
-    """
-    从CSV文件加载诗词数据
+class PoetryDataProcessor:
+    """诗词数据处理器"""
     
-    Args:
-        csv_path: CSV文件路径
+    def __init__(self, data_dir: str = "data/poetry_instruction"):
+        """
+        初始化数据处理器
         
-    Returns:
-        诗词文本列表
-    """
-    texts = []
-    print(f"正在加载: {csv_path}")
-    
-    with open(csv_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-        # 跳过第一行（表头）
-        for line in tqdm(lines[1:], desc="读取数据"):
-            line = line.strip()
-            if line:  # 非空行
-                texts.append(line)
-    
-    return texts
-
-
-def clean_poetry_text(text):
-    """
-    清洗诗词文本
-    
-    Args:
-        text: 原始诗词文本
+        Args:
+            data_dir: 数据目录路径
+        """
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
         
-    Returns:
-        清洗后的文本
-    """
-    # 移除多余空格
-    text = ' '.join(text.split())
+    def load_jsonl(self, file_path: str) -> List[Dict]:
+        """
+        加载JSONL格式的数据
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            数据列表
+        """
+        data = []
+        file_path = Path(file_path)
+        
+        if not file_path.exists():
+            print(f"警告: 文件 {file_path} 不存在")
+            return data
+            
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                try:
+                    data.append(json.loads(line.strip()))
+                except json.JSONDecodeError as e:
+                    print(f"错误: 第 {line_num} 行JSON解析失败: {e}")
+                    
+        return data
     
-    # 过滤太短或太长的诗词
-    if len(text) < 10 or len(text) > 500:
-        return None
+    def save_jsonl(self, data: List[Dict], file_path: str):
+        """
+        保存为JSONL格式
+        
+        Args:
+            data: 数据列表
+            file_path: 文件路径
+        """
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for item in data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        print(f"已保存 {len(data)} 条数据到 {file_path}")
     
-    return text
+    def validate_poem_format(self, poem: str, poem_type: str) -> Tuple[bool, str]:
+        """
+        验证诗词格式是否符合要求
+        
+        Args:
+            poem: 诗词内容
+            poem_type: 诗词类型
+            
+        Returns:
+            (是否有效, 错误信息)
+        """
+        lines = poem.strip().split('\n')
+        
+        # 移除标点符号后的字数
+        clean_lines = [re.sub(r'[，。、；：！？]', '', line) for line in lines]
+        
+        if poem_type == "五言绝句":
+            if len(lines) != 4:
+                return False, f"五言绝句应有4句，实际有{len(lines)}句"
+            for i, line in enumerate(clean_lines, 1):
+                if len(line) != 5:
+                    return False, f"第{i}句应为5字，实际{len(line)}字"
+                    
+        elif poem_type == "七言绝句":
+            if len(lines) != 4:
+                return False, f"七言绝句应有4句，实际有{len(lines)}句"
+            for i, line in enumerate(clean_lines, 1):
+                if len(line) != 7:
+                    return False, f"第{i}句应为7字，实际{len(line)}字"
+                    
+        elif poem_type == "五言律诗":
+            if len(lines) != 8:
+                return False, f"五言律诗应有8句，实际有{len(lines)}句"
+            for i, line in enumerate(clean_lines, 1):
+                if len(line) != 5:
+                    return False, f"第{i}句应为5字，实际{len(line)}字"
+                    
+        elif poem_type == "七言律诗":
+            if len(lines) != 8:
+                return False, f"七言律诗应有8句，实际有{len(lines)}句"
+            for i, line in enumerate(clean_lines, 1):
+                if len(line) != 7:
+                    return False, f"第{i}句应为7字，实际{len(line)}字"
+        
+        return True, ""
+    
+    def validate_dataset(self, data: List[Dict]) -> Dict:
+        """
+        验证整个数据集
+        
+        Args:
+            data: 数据列表
+            
+        Returns:
+            验证结果统计
+        """
+        results = {
+            'total': len(data),
+            'valid': 0,
+            'invalid': 0,
+            'errors': []
+        }
+        
+        for i, item in enumerate(data):
+            # 检查必需字段
+            if 'instruction' not in item or 'output' not in item:
+                results['invalid'] += 1
+                results['errors'].append(f"样本 {i}: 缺少必需字段")
+                continue
+            
+            # 检查诗词格式
+            if 'metadata' in item and 'poem_type' in item['metadata']:
+                poem_type = item['metadata']['poem_type']
+                is_valid, error_msg = self.validate_poem_format(item['output'], poem_type)
+                
+                if not is_valid:
+                    results['invalid'] += 1
+                    results['errors'].append(f"样本 {i}: {error_msg}")
+                    continue
+            
+            results['valid'] += 1
+        
+        return results
+    
+    def analyze_dataset(self, data: List[Dict]) -> Dict:
+        """
+        分析数据集统计信息
+        
+        Args:
+            data: 数据列表
+            
+        Returns:
+            统计信息字典
+        """
+        stats = {
+            'total_samples': len(data),
+            'poem_types': Counter(),
+            'styles': Counter(),
+            'difficulties': Counter(),
+            'themes': Counter(),
+            'emotions': Counter(),
+            'avg_instruction_length': 0,
+            'avg_output_length': 0
+        }
+        
+        instruction_lengths = []
+        output_lengths = []
+        
+        for item in data:
+            # 统计指令和输出长度
+            instruction_lengths.append(len(item.get('instruction', '')))
+            output_lengths.append(len(item.get('output', '')))
+            
+            # 统计元数据
+            metadata = item.get('metadata', {})
+            
+            if 'poem_type' in metadata:
+                stats['poem_types'][metadata['poem_type']] += 1
+            
+            if 'style' in metadata:
+                stats['styles'][metadata['style']] += 1
+            
+            if 'difficulty' in metadata:
+                stats['difficulties'][metadata['difficulty']] += 1
+            
+            if 'theme' in metadata:
+                stats['themes'][metadata['theme']] += 1
+            
+            if 'emotion' in metadata:
+                stats['emotions'][metadata['emotion']] += 1
+        
+        # 计算平均长度
+        if instruction_lengths:
+            stats['avg_instruction_length'] = sum(instruction_lengths) / len(instruction_lengths)
+        if output_lengths:
+            stats['avg_output_length'] = sum(output_lengths) / len(output_lengths)
+        
+        return stats
+    
+    def split_dataset(self, data: List[Dict], 
+                     train_ratio: float = 0.8, 
+                     val_ratio: float = 0.1,
+                     seed: int = 42) -> Dict[str, List[Dict]]:
+        """
+        划分数据集
+        
+        Args:
+            data: 数据列表
+            train_ratio: 训练集比例
+            val_ratio: 验证集比例
+            seed: 随机种子
+            
+        Returns:
+            包含train、val、test的字典
+        """
+        random.seed(seed)
+        data_copy = data.copy()
+        random.shuffle(data_copy)
+        
+        n = len(data_copy)
+        train_end = int(n * train_ratio)
+        val_end = train_end + int(n * val_ratio)
+        
+        return {
+            'train': data_copy[:train_end],
+            'val': data_copy[train_end:val_end],
+            'test': data_copy[val_end:]
+        }
+    
+    def format_for_training(self, data: List[Dict], format_type: str = "alpaca") -> List[Dict]:
+        """
+        将数据格式化为特定训练格式
+        
+        Args:
+            data: 原始数据
+            format_type: 格式类型 (alpaca, chatgpt, etc.)
+            
+        Returns:
+            格式化后的数据
+        """
+        formatted_data = []
+        
+        for item in data:
+            if format_type == "alpaca":
+                # Alpaca格式
+                formatted_item = {
+                    "instruction": item['instruction'],
+                    "input": item.get('input', ''),
+                    "output": item['output']
+                }
+            elif format_type == "chatgpt":
+                # ChatGPT对话格式
+                formatted_item = {
+                    "messages": [
+                        {"role": "system", "content": "你是一个擅长创作古诗词的AI助手。"},
+                        {"role": "user", "content": item['instruction'] + ('\n' + item['input'] if item.get('input') else '')},
+                        {"role": "assistant", "content": item['output']}
+                    ]
+                }
+            else:
+                formatted_item = item
+            
+            formatted_data.append(formatted_item)
+        
+        return formatted_data
+    
+    def print_statistics(self, stats: Dict):
+        """
+        打印统计信息
+        
+        Args:
+            stats: 统计信息字典
+        """
+        print("\n" + "="*50)
+        print("数据集统计信息")
+        print("="*50)
+        print(f"总样本数: {stats['total_samples']}")
+        print(f"平均指令长度: {stats['avg_instruction_length']:.2f} 字符")
+        print(f"平均输出长度: {stats['avg_output_length']:.2f} 字符")
+        
+        if stats['poem_types']:
+            print("\n诗词类型分布:")
+            for poem_type, count in stats['poem_types'].most_common():
+                print(f"  {poem_type}: {count} ({count/stats['total_samples']*100:.1f}%)")
+        
+        if stats['styles']:
+            print("\n风格分布:")
+            for style, count in stats['styles'].most_common():
+                print(f"  {style}: {count} ({count/stats['total_samples']*100:.1f}%)")
+        
+        if stats['difficulties']:
+            print("\n难度分布:")
+            for difficulty, count in stats['difficulties'].most_common():
+                print(f"  {difficulty}: {count} ({count/stats['total_samples']*100:.1f}%)")
+        
+        if stats['themes']:
+            print("\n主题分布 (Top 10):")
+            for theme, count in stats['themes'].most_common(10):
+                print(f"  {theme}: {count}")
+        
+        if stats['emotions']:
+            print("\n情感分布:")
+            for emotion, count in stats['emotions'].most_common():
+                print(f"  {emotion}: {count}")
+        
+        print("="*50 + "\n")
 
 
-def prepare_poetry_data():
-    """
-    准备诗词训练数据
-    """
-    print("=" * 60)
-    print("中文诗词数据集预处理")
-    print("=" * 60)
+def main():
+    """主函数"""
+    # 初始化处理器
+    processor = PoetryDataProcessor("data/poetry_instruction")
     
-    # 数据路径
-    poetry_dir = "data/chinese-poetry-collection"
-    train_csv = os.path.join(poetry_dir, "train.csv")
-    test_csv = os.path.join(poetry_dir, "test.csv")
+    print("正在加载数据集...")
     
-    # 检查数据是否存在
-    if not os.path.exists(train_csv):
-        print(f"\n错误: 找不到训练数据文件: {train_csv}")
-        print("请先运行以下命令克隆数据集:")
-        print("git clone http://www.modelscope.cn/datasets/modelscope/chinese-poetry-collection.git data/chinese-poetry-collection")
-        return
+    # 加载数据
+    train_data = processor.load_jsonl(processor.data_dir / "train.jsonl")
+    val_data = processor.load_jsonl(processor.data_dir / "val.jsonl")
+    test_data = processor.load_jsonl(processor.data_dir / "test.jsonl")
     
-    # 1. 加载数据
-    print("\n1. 加载数据...")
-    train_texts = load_poetry_csv(train_csv)
-    test_texts = load_poetry_csv(test_csv)
+    all_data = train_data + val_data + test_data
     
-    print(f"训练集原始数据: {len(train_texts)} 条")
-    print(f"测试集原始数据: {len(test_texts)} 条")
+    print(f"训练集: {len(train_data)} 条")
+    print(f"验证集: {len(val_data)} 条")
+    print(f"测试集: {len(test_data)} 条")
+    print(f"总计: {len(all_data)} 条")
     
-    # 2. 数据清洗
-    print("\n2. 数据清洗...")
-    cleaned_train = []
-    for text in tqdm(train_texts, desc="清洗训练数据"):
-        cleaned = clean_poetry_text(text)
-        if cleaned:
-            cleaned_train.append(cleaned)
+    # 验证数据集
+    print("\n正在验证数据集...")
+    validation_results = processor.validate_dataset(all_data)
     
-    cleaned_test = []
-    for text in tqdm(test_texts, desc="清洗测试数据"):
-        cleaned = clean_poetry_text(text)
-        if cleaned:
-            cleaned_test.append(cleaned)
+    print(f"有效样本: {validation_results['valid']}")
+    print(f"无效样本: {validation_results['invalid']}")
     
-    print(f"清洗后训练集: {len(cleaned_train)} 条")
-    print(f"清洗后测试集: {len(cleaned_test)} 条")
+    if validation_results['errors']:
+        print("\n错误列表:")
+        for error in validation_results['errors'][:10]:  # 只显示前10个错误
+            print(f"  - {error}")
+        if len(validation_results['errors']) > 10:
+            print(f"  ... 还有 {len(validation_results['errors']) - 10} 个错误")
     
-    # 3. 划分训练集和验证集
-    # 从训练集中取出5%作为验证集
-    print("\n3. 划分数据集...")
-    split_idx = int(len(cleaned_train) * 0.95)
-    train_final = cleaned_train[:split_idx]
-    val_final = cleaned_train[split_idx:]
+    # 分析数据集
+    print("\n正在分析数据集...")
+    stats = processor.analyze_dataset(all_data)
+    processor.print_statistics(stats)
     
-    print(f"最终训练集: {len(train_final)} 条")
-    print(f"最终验证集: {len(val_final)} 条")
-    print(f"测试集: {len(cleaned_test)} 条")
+    # 示例：格式化为不同训练格式
+    print("生成不同格式的训练数据...")
     
-    # 4. 保存处理后的数据
-    print("\n4. 保存数据...")
-    os.makedirs("data/processed", exist_ok=True)
+    # Alpaca格式
+    alpaca_train = processor.format_for_training(train_data, "alpaca")
+    processor.save_jsonl(alpaca_train, processor.data_dir / "train_alpaca.jsonl")
     
-    # 保存训练集
-    with open(config.train_data_path, 'w', encoding='utf-8') as f:
-        for text in tqdm(train_final, desc="保存训练数据"):
-            f.write(text + '\n')
-    print(f"训练数据已保存: {config.train_data_path}")
+    # ChatGPT格式
+    chatgpt_train = processor.format_for_training(train_data, "chatgpt")
+    processor.save_jsonl(chatgpt_train, processor.data_dir / "train_chatgpt.jsonl")
     
-    # 保存验证集
-    with open(config.val_data_path, 'w', encoding='utf-8') as f:
-        for text in tqdm(val_final, desc="保存验证数据"):
-            f.write(text + '\n')
-    print(f"验证数据已保存: {config.val_data_path}")
-    
-    # 保存测试集
-    test_data_path = "data/processed/test.txt"
-    with open(test_data_path, 'w', encoding='utf-8') as f:
-        for text in tqdm(cleaned_test, desc="保存测试数据"):
-            f.write(text + '\n')
-    print(f"测试数据已保存: {test_data_path}")
-    
-    # 5. 构建词表
-    print("\n5. 构建词表...")
-    all_texts = train_final + val_final
-    
-    tokenizer = Tokenizer(vocab_size=config.vocab_size)
-    tokenizer.build_vocab(all_texts)
-    
-    # 6. 保存词表
-    print("\n6. 保存词表...")
-    tokenizer.save(config.vocab_path)
-    print(f"词表已保存: {config.vocab_path}")
-    print(f"词表大小: {len(tokenizer.word2idx)}")
-    
-    # 7. 数据统计
-    print("\n7. 数据统计...")
-    total_chars_train = sum(len(text) for text in train_final)
-    total_chars_val = sum(len(text) for text in val_final)
-    total_chars_test = sum(len(text) for text in cleaned_test)
-    
-    print(f"\n训练集统计:")
-    print(f"  - 样本数: {len(train_final):,}")
-    print(f"  - 总字符数: {total_chars_train:,}")
-    print(f"  - 平均长度: {total_chars_train / len(train_final):.1f} 字符/样本")
-    
-    print(f"\n验证集统计:")
-    print(f"  - 样本数: {len(val_final):,}")
-    print(f"  - 总字符数: {total_chars_val:,}")
-    print(f"  - 平均长度: {total_chars_val / len(val_final):.1f} 字符/样本")
-    
-    print(f"\n测试集统计:")
-    print(f"  - 样本数: {len(cleaned_test):,}")
-    print(f"  - 总字符数: {total_chars_test:,}")
-    print(f"  - 平均长度: {total_chars_test / len(cleaned_test):.1f} 字符/样本")
-    
-    # 8. 测试分词
-    print("\n8. 测试分词...")
-    test_text = train_final[0]
-    print(f"原始文本: {test_text}")
-    
-    token_ids = tokenizer.encode(test_text)
-    print(f"Token数量: {len(token_ids)}")
-    print(f"Token IDs (前20个): {token_ids[:20]}")
-    
-    decoded_text = tokenizer.decode(token_ids)
-    print(f"解码文本: {decoded_text}")
-    
-    # 9. 保存数据集信息
-    print("\n9. 保存数据集信息...")
-    dataset_info = {
-        "dataset_name": "chinese-poetry-collection",
-        "source": "ModelScope",
-        "train_samples": len(train_final),
-        "val_samples": len(val_final),
-        "test_samples": len(cleaned_test),
-        "total_chars_train": total_chars_train,
-        "total_chars_val": total_chars_val,
-        "total_chars_test": total_chars_test,
-        "vocab_size": len(tokenizer.word2idx),
-        "avg_length_train": total_chars_train / len(train_final),
-        "avg_length_val": total_chars_val / len(val_final),
-        "avg_length_test": total_chars_test / len(cleaned_test),
-    }
-    
-    info_path = "data/processed/dataset_info.json"
-    with open(info_path, 'w', encoding='utf-8') as f:
-        json.dump(dataset_info, f, ensure_ascii=False, indent=2)
-    print(f"数据集信息已保存: {info_path}")
-    
-    print("\n" + "=" * 60)
-    print("数据预处理完成！")
-    print("=" * 60)
-    print("\n下一步: 运行 python train.py 开始训练")
+    print("\n数据处理完成！")
+    print(f"数据目录: {processor.data_dir.absolute()}")
 
 
 if __name__ == "__main__":
-    prepare_poetry_data()
+    main()

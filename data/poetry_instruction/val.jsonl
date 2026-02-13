@@ -1,0 +1,5 @@
+{"instruction": "写一首关于冬天的五言绝句", "input": "", "output": "雪落梅花白，\n寒风透骨来。\n炉火红似锦，\n温酒待君开。", "metadata": {"poem_type": "五言绝句", "style": "清新", "season": "冬", "difficulty": "初级"}}
+{"instruction": "创作一首表达离愁别绪的七言绝句", "input": "", "output": "劝君更尽一杯酒，\n西出阳关无故人。\n桃花潭水深千尺，\n不及汪伦送我情。", "metadata": {"poem_type": "七言绝句", "style": "婉约", "emotion": "离别", "difficulty": "中级"}}
+{"instruction": "以'云'为题，写一首五言绝句", "input": "", "output": "白云天际飞，\n悠悠千载情。\n浮云如白衣，\n变幻似苍生。", "metadata": {"poem_type": "五言绝句", "style": "清新", "theme": "云", "difficulty": "初级"}}
+{"instruction": "写一首描写江南水乡的七言绝句", "input": "", "output": "江南好景旧曾谙，\n日出江花红胜火。\n春来江水绿如蓝，\n能不忆江南美丽。", "metadata": {"poem_type": "七言绝句", "style": "清新", "theme": "江南", "difficulty": "中级"}}
+{"instruction": "创作一首咏史诗，表达对古人的敬仰", "input": "", "output": "千古风流人物在，\n大江东去浪淘沙。\n故垒西边人道是，\n三国周郎赤壁下。", "metadata": {"poem_type": "七言绝句", "style": "豪放", "theme": "咏史", "difficulty": "高级"}}

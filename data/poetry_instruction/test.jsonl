@@ -1,0 +1,5 @@
+{"instruction": "写一首关于秋月的五言绝句", "input": "", "output": "秋月照窗明，\n清辉洒满庭。\n举头望明月，\n低头思故乡。", "metadata": {"poem_type": "五言绝句", "style": "婉约", "season": "秋", "theme": "月", "difficulty": "初级"}}
+{"instruction": "创作一首表达报国之志的七言绝句", "input": "", "output": "男儿何不带吴钩，\n收取关山五十州。\n请君暂上凌烟阁，\n若个书生万户侯。", "metadata": {"poem_type": "七言绝句", "style": "豪放", "emotion": "报国", "difficulty": "中级"}}
+{"instruction": "以'风'为主题，写一首五言绝句", "input": "", "output": "春风拂面暖，\n柳絮舞翩跹。\n东风催花开，\n万物竞争妍。", "metadata": {"poem_type": "五言绝句", "style": "清新", "theme": "风", "difficulty": "初级"}}
+{"instruction": "写一首描写黄昏景色的七言绝句", "input": "", "output": "夕阳无限好风光，\n只是近黄昏时分。\n落霞与孤鹜齐飞，\n秋水共长天一色。", "metadata": {"poem_type": "七言绝句", "style": "清新", "theme": "黄昏", "difficulty": "中级"}}
+{"instruction": "创作一首表达人生感悟的五言律诗", "input": "", "output": "人生天地间，\n忽如远行客。\n斗酒相娱乐，\n明日各东西。\n世事如棋局，\n人情似纸薄。\n莫道桑榆晚，\n为霞尚满天。", "metadata": {"poem_type": "五言律诗", "style": "古典", "theme": "人生", "difficulty": "高级"}}

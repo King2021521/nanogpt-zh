@@ -1,0 +1,20 @@
+{"instruction": "写一首描写春天的五言绝句", "input": "", "output": "春风拂柳绿，\n燕子绕梁飞。\n桃花三月雨，\n诗意满园归。", "metadata": {"poem_type": "五言绝句", "style": "清新", "season": "春", "difficulty": "初级"}}
+{"instruction": "创作一首表达友情的七言绝句", "input": "", "output": "相逢一笑泯恩仇，\n把酒言欢话旧游。\n天涯若比邻在望，\n知己难求世上留。", "metadata": {"poem_type": "七言绝句", "style": "豪放", "emotion": "友情", "difficulty": "中级"}}
+{"instruction": "以'山'为题，写一首五言律诗", "input": "", "output": "青山横北郭，\n白水绕东城。\n此地一为别，\n孤蓬万里征。\n浮云游子意，\n落日故人情。\n挥手自兹去，\n萧萧班马鸣。", "metadata": {"poem_type": "五言律诗", "style": "古典", "theme": "山", "difficulty": "高级"}}
+{"instruction": "写一首关于秋天的诗，风格婉约", "input": "", "output": "秋风起兮白云飞，\n草木黄落兮雁南归。\n兰有秀兮菊有芳，\n怀佳人兮不能忘。", "metadata": {"poem_type": "古体诗", "style": "婉约", "season": "秋", "difficulty": "中级"}}
+{"instruction": "创作一首赞美梅花的七言绝句", "input": "", "output": "墙角数枝梅独立，\n凌寒独自开花时。\n遥知不是雪纷飞，\n为有暗香来袭之。", "metadata": {"poem_type": "七言绝句", "style": "清新", "theme": "梅花", "difficulty": "中级"}}
+{"instruction": "写一首描写夏天的五言绝句", "input": "", "output": "荷花映日红，\n蝉鸣柳树中。\n清风送凉意，\n夏日亦从容。", "metadata": {"poem_type": "五言绝句", "style": "清新", "season": "夏", "difficulty": "初级"}}
+{"instruction": "表达思乡之情的七言绝句", "input": "", "output": "明月千里照故乡，\n秋风落叶满庭霜。\n游子天涯心未老，\n梦回故里泪两行。", "metadata": {"poem_type": "七言绝句", "style": "婉约", "emotion": "思乡", "difficulty": "中级"}}
+{"instruction": "以'月'为主题，写一首豪放派风格的七言律诗", "input": "", "output": "长空万里月如钩，\n照破山河几度秋。\n壮士胸中藏日月，\n英雄剑下斩千愁。\n江山如画风云起，\n天地无边志气酬。\n举杯邀月共此夜，\n笑看人间任自由。", "metadata": {"poem_type": "七言律诗", "style": "豪放", "theme": "月", "difficulty": "高级"}}
+{"instruction": "写一首五言绝句，要求包含'风'、'雨'两个字，表达离别之情", "input": "关键词：风、雨", "output": "风起雨纷纷，\n离人泪满襟。\n天涯各一方，\n何日再相寻。", "metadata": {"poem_type": "五言绝句", "style": "婉约", "emotion": "离别", "keywords": ["风", "雨"], "difficulty": "中级"}}
+{"instruction": "模仿李白的风格，创作一首关于饮酒的诗", "input": "风格：李白", "output": "青天有月来几时，\n我今停杯一问之。\n人生得意须尽欢，\n莫使金樽空对月。\n天生我材必有用，\n千金散尽还复来。\n烹羊宰牛且为乐，\n会须一饮三百杯。", "metadata": {"poem_type": "古体诗", "style": "豪放", "imitate": "李白", "theme": "饮酒", "difficulty": "高级"}}
+{"instruction": "用古诗词的形式描写现代都市生活", "input": "主题：现代都市", "output": "高楼林立入云霄，\n车水马龙夜未消。\n霓虹闪烁千万色，\n都市繁华竞折腰。", "metadata": {"poem_type": "七言绝句", "style": "现代", "theme": "都市", "difficulty": "中级"}}
+{"instruction": "写一首关于冬天雪景的五言绝句", "input": "", "output": "千山鸟飞绝，\n万径人踪灭。\n孤舟蓑笠翁，\n独钓寒江雪。", "metadata": {"poem_type": "五言绝句", "style": "古典", "season": "冬", "theme": "雪", "difficulty": "中级"}}
+{"instruction": "创作一首表达爱情的七言绝句", "input": "", "output": "红豆生南国春来，\n愿君多采撷几回。\n此物最相思难忘，\n一枝一叶总关怀。", "metadata": {"poem_type": "七言绝句", "style": "婉约", "emotion": "爱情", "difficulty": "中级"}}
+{"instruction": "以'水'为题，写一首五言绝句", "input": "", "output": "清泉石上流，\n明月松间照。\n山高水自长，\n天地任逍遥。", "metadata": {"poem_type": "五言绝句", "style": "清新", "theme": "水", "difficulty": "初级"}}
+{"instruction": "写一首描写边塞风光的七言绝句", "input": "", "output": "大漠孤烟直上天，\n长河落日圆如盘。\n萧关逢候骑马过，\n都护在燕然山间。", "metadata": {"poem_type": "七言绝句", "style": "豪放", "theme": "边塞", "difficulty": "中级"}}
+{"instruction": "创作一首咏物诗，赞美竹子", "input": "对象：竹子", "output": "咬定青山不放松，\n立根原在破岩中。\n千磨万击还坚劲，\n任尔东西南北风。", "metadata": {"poem_type": "七言绝句", "style": "豪放", "theme": "竹子", "difficulty": "中级"}}
+{"instruction": "写一首表达壮志豪情的五言律诗", "input": "", "output": "会当凌绝顶，\n一览众山小。\n天高任鸟飞，\n海阔凭鱼跃。\n壮志凌云起，\n豪情满胸怀。\n男儿当自强，\n不负少年才。", "metadata": {"poem_type": "五言律诗", "style": "豪放", "emotion": "壮志", "difficulty": "高级"}}
+{"instruction": "以'花'为主题，写一首婉约风格的七言绝句", "input": "", "output": "花开花落又一年，\n春去春来总缠绵。\n最是人间留不住，\n朱颜辞镜花辞树。", "metadata": {"poem_type": "七言绝句", "style": "婉约", "theme": "花", "difficulty": "中级"}}
+{"instruction": "写一首描写田园生活的五言绝句", "input": "", "output": "采菊东篱下，\n悠然见南山。\n山气日夕佳，\n飞鸟相与还。", "metadata": {"poem_type": "五言绝句", "style": "清新", "theme": "田园", "difficulty": "初级"}}
+{"instruction": "创作一首表达惜时的七言绝句", "input": "", "output": "少壮不努力辛勤，\n老大徒伤悲叹息。\n一寸光阴一寸金，\n寸金难买寸光阴。", "metadata": {"poem_type": "七言绝句", "style": "古典", "theme": "惜时", "difficulty": "初级"}}
