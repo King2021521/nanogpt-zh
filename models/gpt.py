@@ -128,9 +128,11 @@ class GPTModel(nn.Module):
         return logits, loss
     
     @torch.no_grad()
-    def generate(self, input_ids, max_new_tokens, temperature=1.0, top_k=None, top_p=None):
+    def generate(self, input_ids, max_new_tokens, temperature=1.0, top_k=None, top_p=None, 
+                 eos_token_id=None, suppress_eos_steps=None, suppress_punct_tokens=None):
         """
         自回归生成文本
+        @Author xiaomin.zhang
         
         Args:
             input_ids: (batch_size, seq_len) 初始token IDs
@@ -138,13 +140,23 @@ class GPTModel(nn.Module):
             temperature: 采样温度（越高越随机）
             top_k: Top-K采样
             top_p: Top-P (nucleus) 采样
+            eos_token_id: EOS token的ID，如果提供则会降低其概率避免过早结束
+            suppress_eos_steps: 在前N步抑制EOS token，默认为max_new_tokens-5
+            suppress_punct_tokens: 标点符号token ID列表，用于抑制连续标点符号
         
         Returns:
             generated: (batch_size, seq_len + max_new_tokens) 生成的token IDs
         """
         self.eval()  # 设置为评估模式
         
-        for _ in range(max_new_tokens):
+        # 如果没有指定suppress_eos_steps，默认在前90%的步数中抑制EOS
+        if suppress_eos_steps is None:
+            suppress_eos_steps = max(int(max_new_tokens * 0.9), max_new_tokens - 5)
+        
+        # 记录最近生成的token，用于检测连续标点符号
+        recent_tokens = []
+        
+        for step in range(max_new_tokens):
             # 如果序列太长，截断到max_seq_len
             input_ids_cond = input_ids if input_ids.size(1) <= self.config.max_seq_len else \
                             input_ids[:, -self.config.max_seq_len:]
@@ -157,6 +169,23 @@ class GPTModel(nn.Module):
             
             # 应用温度
             logits = logits / temperature
+            
+            # 在生成前期大幅降低EOS token的概率，避免过早结束
+            if eos_token_id is not None and step < suppress_eos_steps:
+                logits[:, eos_token_id] = logits[:, eos_token_id] - 10.0  # 大幅降低EOS概率
+            
+            # 抑制连续标点符号：如果最近生成的2-3个token都是标点，大幅降低标点概率
+            if suppress_punct_tokens is not None and len(recent_tokens) >= 2:
+                # 检查最近2个token是否都是标点
+                recent_punct_count = sum(1 for t in recent_tokens[-2:] if t in suppress_punct_tokens)
+                if recent_punct_count >= 2:
+                    # 如果连续2个都是标点，大幅降低所有标点的概率
+                    for punct_id in suppress_punct_tokens:
+                        logits[:, punct_id] = logits[:, punct_id] - 15.0
+                elif recent_punct_count >= 1:
+                    # 如果最近有1个标点，适度降低标点概率
+                    for punct_id in suppress_punct_tokens:
+                        logits[:, punct_id] = logits[:, punct_id] - 5.0
             
             # Top-K采样
             if top_k is not None:
@@ -181,6 +210,12 @@ class GPTModel(nn.Module):
             
             # 采样下一个token
             next_token = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
+            
+            # 记录最近生成的token（用于下一轮检测）
+            next_token_id = next_token.item()
+            recent_tokens.append(next_token_id)
+            if len(recent_tokens) > 5:  # 只保留最近5个token
+                recent_tokens.pop(0)
             
             # 拼接到序列
             input_ids = torch.cat([input_ids, next_token], dim=1)

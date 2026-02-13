@@ -57,26 +57,34 @@ class PoetryTester:
         total_params = sum(p.numel() for p in self.model.parameters())
         print(f"模型参数量: {total_params:,} ({total_params/1e6:.2f}M)")
     
-    def generate(self, prompt, max_length=64, temperature=0.8, top_k=40, top_p=0.85, num_samples=1):
+    def generate(self, prompt, max_length=128, temperature=1.0, top_k=80, top_p=0.9, num_samples=1):
         """
         生成诗词
+        @Author xiaomin.zhang
         
         Args:
             prompt: 提示文本（诗词开头）
-            max_length: 最大生成长度
-            temperature: 采样温度
-            top_k: Top-K采样
-            top_p: Top-P采样
+            max_length: 最大生成长度（默认128，增加以生成更长内容）
+            temperature: 采样温度（默认1.0，提高以增加多样性）
+            top_k: Top-K采样（默认80，增加以提高质量）
+            top_p: Top-P采样（默认0.9，提高以增加多样性）
             num_samples: 生成样本数
             
         Returns:
             生成的诗词列表
         """
+        # 获取标点符号的token ID（用于抑制连续标点符号）
+        punct_tokens = ['，', '。', '、', '；', '：', '？', '！', ',', '.', '·', '…']
+        punct_token_ids = []
+        for p in punct_tokens:
+            if p in self.tokenizer.word2idx:
+                punct_token_ids.append(self.tokenizer.word2idx[p])
+        
         results = []
         
         for i in range(num_samples):
-            # 编码输入
-            input_ids = self.tokenizer.encode(prompt, add_special_tokens=True)
+            # 编码输入（不添加特殊token，避免BOS/EOS干扰）
+            input_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
             input_ids = torch.tensor([input_ids], dtype=torch.long).to(self.device)
             
             # 生成
@@ -86,7 +94,10 @@ class PoetryTester:
                     max_new_tokens=max_length,
                     temperature=temperature,
                     top_k=top_k,
-                    top_p=top_p
+                    top_p=top_p,
+                    eos_token_id=self.tokenizer.eos_id,  # 传入EOS token ID
+                    suppress_eos_steps=int(max_length * 0.9),  # 在前90%的步数中抑制EOS
+                    suppress_punct_tokens=punct_token_ids  # 传入标点符号ID列表
                 )
             
             # 解码
@@ -267,11 +278,11 @@ class PoetryTester:
         print("输入 'config' 查看当前配置")
         print("=" * 60)
         
-        # 默认参数
-        temperature = 0.8
-        top_k = 40
-        top_p = 0.85
-        max_length = 64
+        # 默认参数（优化后的生成参数）
+        temperature = 1.0
+        top_k = 80
+        top_p = 0.9
+        max_length = 128
         
         while True:
             try:
@@ -331,14 +342,14 @@ def main():
                         help='测试模式')
     parser.add_argument('--prompt', type=str, default='春江潮水连海平',
                         help='测试提示（用于single和temperature模式）')
-    parser.add_argument('--temperature', type=float, default=0.8,
-                        help='采样温度')
-    parser.add_argument('--top_k', type=int, default=40,
-                        help='Top-K采样')
-    parser.add_argument('--top_p', type=float, default=0.85,
-                        help='Top-P采样')
-    parser.add_argument('--max_length', type=int, default=64,
-                        help='最大生成长度')
+    parser.add_argument('--temperature', type=float, default=1.0,
+                        help='采样温度（推荐1.0-1.2）')
+    parser.add_argument('--top_k', type=int, default=80,
+                        help='Top-K采样（推荐80-100）')
+    parser.add_argument('--top_p', type=float, default=0.9,
+                        help='Top-P采样（推荐0.9-0.95）')
+    parser.add_argument('--max_length', type=int, default=128,
+                        help='最大生成长度（推荐128）')
     
     args = parser.parse_args()
     
@@ -405,8 +416,10 @@ def main():
         print("\n【1. 单个生成测试】")
         tester.test_single_generation(
             "春江潮水连海平",
-            max_length=64,
-            temperature=0.8,
+            max_length=128,
+            temperature=1.0,
+            top_k=80,
+            top_p=0.9,
             num_samples=3
         )
         
@@ -418,7 +431,7 @@ def main():
             "白日依山尽",
             "独在异乡为异客"
         ]
-        tester.test_multiple_prompts(prompts, max_length=64)
+        tester.test_multiple_prompts(prompts, max_length=128, temperature=1.0, top_k=80, top_p=0.9)
         
         # 3. 温度测试
         print("\n【3. 温度参数测试】")

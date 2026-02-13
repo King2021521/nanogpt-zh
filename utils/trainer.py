@@ -170,7 +170,9 @@ class Trainer:
         
         start_time = time.time()
         
-        for epoch in range(self.config.max_epochs):
+        # 从当前epoch开始训练（支持从检查点恢复）
+        start_epoch = self.epoch
+        for epoch in range(start_epoch, self.config.max_epochs):
             self.epoch = epoch
             
             # 训练一个epoch

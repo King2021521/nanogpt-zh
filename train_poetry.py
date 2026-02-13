@@ -6,9 +6,51 @@
 
 import torch
 import os
+import glob
+import re
 from config_poetry import config_poetry
 from models import GPTModel
 from utils import Tokenizer, create_dataloader, Trainer
+
+
+def find_latest_checkpoint(checkpoint_dir):
+    """
+    查找最新的检查点文件
+    @Author xiaomin.zhang
+    
+    Args:
+        checkpoint_dir: 检查点目录
+    
+    Returns:
+        最新检查点的路径，如果没有找到则返回None
+    """
+    if not os.path.exists(checkpoint_dir):
+        return None
+    
+    # 查找所有检查点文件
+    checkpoint_files = glob.glob(os.path.join(checkpoint_dir, "checkpoint_step_*.pt"))
+    
+    if not checkpoint_files:
+        return None
+    
+    # 提取步数并排序
+    checkpoint_info = []
+    for ckpt_file in checkpoint_files:
+        # 从文件名中提取步数，例如: checkpoint_step_78000.pt -> 78000
+        match = re.search(r'checkpoint_step_(\d+)\.pt', os.path.basename(ckpt_file))
+        if match:
+            step = int(match.group(1))
+            checkpoint_info.append((step, ckpt_file))
+    
+    if not checkpoint_info:
+        return None
+    
+    # 按步数排序，返回最新的
+    checkpoint_info.sort(key=lambda x: x[0], reverse=True)
+    latest_step, latest_file = checkpoint_info[0]
+    
+    print(f"\n找到最新检查点: {os.path.basename(latest_file)} (步数: {latest_step})")
+    return latest_file
 
 
 def main():
@@ -70,12 +112,29 @@ def main():
     print("\n4. 训练配置:")
     print(config_poetry)
     
-    # 5. 创建训练器
-    print("\n5. 创建训练器...")
+    # 5. 查找并加载最新检查点
+    print("\n5. 检查是否有已保存的检查点...")
+    latest_checkpoint = find_latest_checkpoint(config_poetry.checkpoint_dir)
+    
+    # 6. 创建训练器
+    print("\n6. 创建训练器...")
     trainer = Trainer(model, train_loader, val_loader, config_poetry)
     
-    # 6. 开始训练
-    print("\n6. 开始训练...")
+    # 7. 如果找到检查点，加载它
+    if latest_checkpoint:
+        print(f"\n正在从检查点恢复训练...")
+        try:
+            trainer.load_checkpoint(latest_checkpoint)
+            print(f"[OK] 将从第 {trainer.epoch + 1} 轮，第 {trainer.global_step} 步继续训练")
+        except Exception as e:
+            print(f"[警告] 加载检查点失败: {e}")
+            print("将从头开始训练...")
+    else:
+        print("未找到检查点，将从头开始训练")
+    
+    # 8. 开始训练
+    print("\n" + "=" * 60)
+    print("开始训练...")
     print("=" * 60)
     trainer.train()
     

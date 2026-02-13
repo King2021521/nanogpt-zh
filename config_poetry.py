@@ -6,16 +6,19 @@ NanoGPT-ZH 诗词训练配置文件
 
 class PoetryConfig:
     """
-    NanoGPT-ZH 诗词模型配置
+    NanoGPT-ZH 诗词模型配置 - RTX 3080优化版本
     
-    数据集规模:
-    - 训练样本: 367,896 条
-    - 验证样本: 19,363 条
-    - 总字符数: ~1365万字符
-    - 平均长度: 37字符/样本
+    数据集规模（更新后，含宋词）:
+    - 训练样本: 372,911 条 (+5,015)
+    - 验证样本: 9,813 条
+    - 测试样本: 9,814 条
+    - 总字符数: ~1471万字符 (+106万)
+    - 平均长度: 37.5字符/样本
+    - 唯一字符: 9,833
     
-    模型规模: ~12.8M 参数
+    模型规模: ~50M 参数（理想配置）
     架构: Decoder-Only Transformer (GPT风格)
+    硬件: RTX 3080 (10GB VRAM)
     """
     
     # ============ 项目信息 ============
@@ -24,23 +27,23 @@ class PoetryConfig:
     description = "Chinese Poetry Generation Model"
     
     # ============ 模型架构参数 ============
-    # 针对诗词生成任务优化
+    # 针对诗词生成任务优化 - 50M参数规模（RTX 3080）
     vocab_size = 10000          # 词表大小（与预处理保持一致）
-    max_seq_len = 64           # 最大序列长度（诗词平均37字符，128足够）
-    d_model = 384               # 模型维度（增大以提升表达能力）
-    n_layers = 8                # Transformer层数（增加层数学习诗词结构）
-    n_heads = 8                 # 注意力头数
-    d_ff = 1536                 # 前馈网络维度（d_model的4倍）
+    max_seq_len = 128           # 最大序列长度（增加以支持长诗词）
+    d_model = 768               # 模型维度（增大至768以提升表达能力）
+    n_layers = 12               # Transformer层数（12层深度网络）
+    n_heads = 12                # 注意力头数（与d_model匹配）
+    d_ff = 3072                 # 前馈网络维度（d_model的4倍）
     dropout = 0.1               # Dropout概率
     
     # ============ 训练参数 ============
-    # 基于36.7万样本的训练策略
-    batch_size = 32             # 批次大小（增大以加速训练）
-    learning_rate = 3e-4        # 学习率（稍微提高）
+    # 基于36.7万样本的训练策略 - RTX 3080优化配置
+    batch_size = 64             # 批次大小（3080显存充足，增大批次）
+    learning_rate = 3e-4        # 学习率（标准GPT学习率）
     weight_decay = 0.01         # 权重衰减
-    max_epochs = 8             # 最大训练轮数（数据量大，可以多训练几轮）
-    warmup_steps = 1000         # 学习率预热步数（增加预热步数）
-    max_steps = 80000          # 最大训练步数
+    max_epochs = 20             # 最大训练轮数（充分训练）
+    warmup_steps = 2000         # 学习率预热步数（更平滑的预热）
+    max_steps = 200000          # 最大训练步数（充分训练以达到最佳效果）
     
     # ============ 优化器参数 ============
     betas = (0.9, 0.95)         # Adam优化器的beta参数
@@ -54,16 +57,16 @@ class PoetryConfig:
     # ============ 检查点和日志 ============
     checkpoint_dir = "checkpoints_poetry"
     log_dir = "logs_poetry"
-    save_interval = 2000        # 每2000步保存一次模型
-    eval_interval = 1000        # 每1000步评估一次
-    log_interval = 1000          # 每100步记录一次日志
+    save_interval = 5000        # 每5000步保存一次模型（减少IO开销）
+    eval_interval = 2000        # 每2000步评估一次
+    log_interval = 500          # 每500步记录一次日志
     
     # ============ 推理参数 ============
     # 针对诗词生成优化
-    temperature = 0.8           # 采样温度（降低以生成更连贯的诗词）
-    top_k = 40                  # Top-K采样（减小以提高质量）
-    top_p = 0.85                # Top-P采样（稍微降低）
-    max_gen_len = 128            # 最大生成长度（诗词一般不会太长）
+    temperature = 1.0           # 采样温度（平衡多样性和连贯性）
+    top_k = 80                  # Top-K采样（增加多样性）
+    top_p = 0.9                 # Top-P采样（标准设置）
+    max_gen_len = 128           # 最大生成长度（支持长诗词）
     
     # ============ 特殊token ============
     pad_token = "<PAD>"
@@ -75,12 +78,13 @@ class PoetryConfig:
     def device(self):
         """自动检测设备"""
         import torch
+        # RTX 3080服务器，使用CUDA加速
         return "cuda" if torch.cuda.is_available() else "cpu"
     
     def get_training_stats(self):
         """计算训练统计信息"""
-        # 训练样本数
-        train_samples = 367896
+        # 训练样本数（更新后）
+        train_samples = 372911
         
         # 每个epoch的步数
         steps_per_epoch = train_samples // self.batch_size
@@ -170,9 +174,11 @@ if __name__ == "__main__":
     stats = config_poetry.get_training_stats()
     
     print(f"\n数据集规模:")
-    print(f"  - 训练样本: 367,896 条")
-    print(f"  - 验证样本: 19,363 条")
-    print(f"  - 平均长度: 37 字符/样本")
+    print(f"  - 训练样本: 372,911 条 (+5,015，含宋词)")
+    print(f"  - 验证样本: 9,813 条")
+    print(f"  - 测试样本: 9,814 条")
+    print(f"  - 平均长度: 37.5 字符/样本")
+    print(f"  - 唯一字符: 9,833")
     
     print(f"\n训练策略:")
     print(f"  - 批次大小: {config_poetry.batch_size}")
