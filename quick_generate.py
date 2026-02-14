@@ -8,7 +8,7 @@ from config_poetry import config_poetry
 from models import GPTModel
 from utils import Tokenizer
 
-def quick_generate(prompt, checkpoint_path="checkpoints_poetry/best_model.pt", 
+def quick_generate(prompt, checkpoint_path="checkpoints/best_model.pt",
                    temperature=1.0, top_k=80, top_p=0.9, max_length=128):
     """
     快速生成诗词
@@ -42,8 +42,10 @@ def quick_generate(prompt, checkpoint_path="checkpoints_poetry/best_model.pt",
     model.to(device)
     model.eval()
     
-    # 编码输入（不添加特殊token）
-    input_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    # 编码输入：前加 BOS，与训练时序列分布一致，避免分布偏移
+    # @Author xiaomin.zhang
+    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    input_ids = [tokenizer.bos_id] + prompt_ids
     input_ids = torch.tensor([input_ids], dtype=torch.long).to(device)
     
     # 生成
@@ -129,7 +131,7 @@ def interactive_mode():
             punct_token_ids.append(tokenizer.word2idx[p])
     
     model = GPTModel(config_poetry)
-    checkpoint = torch.load("checkpoints_poetry/final_model.pt", map_location=device, weights_only=False)
+    checkpoint = torch.load("checkpoints/best_model.pt", map_location=device, weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
@@ -149,8 +151,10 @@ def interactive_mode():
                 print("请输入有效的诗词开头")
                 continue
             
-            # 编码输入
-            input_ids = tokenizer.encode(prompt, add_special_tokens=False)
+            # 编码输入：前加 BOS，与训练时一致
+            # @Author xiaomin.zhang
+            prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+            input_ids = [tokenizer.bos_id] + prompt_ids
             input_ids = torch.tensor([input_ids], dtype=torch.long).to(device)
             
             # 生成

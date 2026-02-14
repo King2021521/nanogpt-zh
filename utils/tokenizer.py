@@ -41,6 +41,10 @@ class Tokenizer:
         self.unk_id = 1
         self.bos_id = 2
         self.eos_id = 3
+        
+        # 字符级词表标记：为 True 时按字符编码/解码（与 rebuild_vocab 字符级词表一致）
+        # @Author xiaomin.zhang
+        self._char_level = False
     
     def build_vocab(self, texts):
         """
@@ -77,6 +81,8 @@ class Tokenizer:
     def encode(self, text, add_special_tokens=True):
         """
         将文本编码为token IDs
+        若词表为字符级（如 rebuild_vocab 构建），则按字符切分；否则使用 jieba 分词。
+        @Author xiaomin.zhang
         
         Args:
             text: 输入文本
@@ -85,8 +91,12 @@ class Tokenizer:
         Returns:
             token_ids: token ID列表
         """
-        words = list(jieba.cut(text))
-        token_ids = [self.word2idx.get(word, self.unk_id) for word in words]
+        if self._char_level:
+            # 字符级词表：逐字编码，避免 jieba 切词导致大量 UNK
+            units = list(text)
+        else:
+            units = list(jieba.cut(text))
+        token_ids = [self.word2idx.get(u, self.unk_id) for u in units]
         
         if add_special_tokens:
             token_ids = [self.bos_id] + token_ids + [self.eos_id]
@@ -163,6 +173,15 @@ class Tokenizer:
         self.unk_id = self.word2idx[self.unk_token]
         self.bos_id = self.word2idx[self.bos_token]
         self.eos_id = self.word2idx[self.eos_token]
+        
+        # 检测是否为字符级词表（如 scripts/rebuild_vocab.py 构建）：非特殊 token 中绝大多数为单字
+        # @Author xiaomin.zhang
+        non_special = [k for k in self.word2idx if k not in self.special_tokens]
+        if non_special:
+            single_char_ratio = sum(1 for k in non_special if len(k) == 1) / len(non_special)
+            self._char_level = single_char_ratio >= 0.9
+            if self._char_level:
+                print(f"检测到字符级词表，已启用按字符编码/解码")
         
         print(f"词表已加载: {load_path}")
         print(f"词表大小: {len(self.word2idx)}")

@@ -83,8 +83,10 @@ class PoetryTester:
         results = []
         
         for i in range(num_samples):
-            # 编码输入（不添加特殊token，避免BOS/EOS干扰）
-            input_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
+            # 编码输入：前加 BOS，与训练时序列分布一致
+            # @Author xiaomin.zhang
+            prompt_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
+            input_ids = [self.tokenizer.bos_id] + prompt_ids
             input_ids = torch.tensor([input_ids], dtype=torch.long).to(self.device)
             
             # 生成

@@ -119,10 +119,13 @@ class GPTModel(nn.Module):
             # 重塑logits和targets以计算交叉熵损失
             # logits: (batch_size * seq_len, vocab_size)
             # targets: (batch_size * seq_len)
+            # ignore_index 需与 tokenizer.pad_id 一致（通常为 0），避免对 padding 位置计算损失
+            # @Author xiaomin.zhang
+            pad_id = getattr(self.config, 'pad_id', 0)
             loss = nn.functional.cross_entropy(
                 logits.view(-1, logits.size(-1)),
                 targets.view(-1),
-                ignore_index=-1  # 忽略padding token
+                ignore_index=pad_id
             )
         
         return logits, loss
