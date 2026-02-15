@@ -61,7 +61,7 @@ def quick_generate(prompt, checkpoint_path="checkpoints/best_model.pt",
             top_k=top_k,
             top_p=top_p,
             eos_token_id=tokenizer.eos_id,
-            suppress_eos_steps=int(max_length * 0.9),
+            suppress_eos_steps=int(max_length * 0.6),  # 策略一：前60%步抑制EOS，之后遇EOS即停止
             suppress_punct_tokens=punct_token_ids
         )
     
@@ -113,10 +113,10 @@ def interactive_mode():
     print("=" * 60)
     
     # 默认参数
-    temperature = 0.8
+    temperature = 1.0
     top_k = 60
     top_p = 0.9
-    max_length = 128
+    max_length = 64
     
     # 预加载模型（避免每次都加载）
     device = torch.device("cpu")
@@ -167,7 +167,7 @@ def interactive_mode():
                     top_k=top_k,
                     top_p=top_p,
                     eos_token_id=tokenizer.eos_id,
-                    suppress_eos_steps=int(max_length * 0.9),
+                    suppress_eos_steps=int(max_length * 0.6),  # 策略一：前60%步抑制EOS
                     suppress_punct_tokens=punct_token_ids
                 )
             

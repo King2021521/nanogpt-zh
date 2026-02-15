@@ -30,18 +30,18 @@ class PoetryConfig:
     # 针对诗词生成任务优化 - 50M参数规模（RTX 3080）
     vocab_size = 10000          # 词表大小（与预处理保持一致）
     max_seq_len = 128           # 最大序列长度（增加以支持长诗词）
-    d_model = 512               # 模型维度（增大至768以提升表达能力）
-    n_layers = 8               # Transformer层数（12层深度网络）
-    n_heads = 8                # 注意力头数（与d_model匹配）
-    d_ff = 2048                 # 前馈网络维度（d_model的4倍）
+    d_model = 768               # 模型维度（增大至768以提升表达能力）
+    n_layers = 12               # Transformer层数（12层深度网络）
+    n_heads = 12                # 注意力头数（与d_model匹配）
+    d_ff = 3072                 # 前馈网络维度（d_model的4倍）
     dropout = 0.1               # Dropout概率
     
     # ============ 训练参数 ============
     # 基于36.7万样本的训练策略 - RTX 3080优化配置
     batch_size = 48             # 批次大小（3080显存充足，增大批次）
-    learning_rate = 1e-4        # 学习率（标准GPT学习率）
+    learning_rate = 2e-4        # 学习率（标准GPT学习率）
     weight_decay = 0.01         # 权重衰减
-    max_epochs = 25             # 最大训练轮数（充分训练）
+    max_epochs = 30             # 最大训练轮数（充分训练）
     warmup_steps = 2000         # 学习率预热步数（更平滑的预热）
     max_steps = 300000          # 最大训练步数（充分训练以达到最佳效果）
     

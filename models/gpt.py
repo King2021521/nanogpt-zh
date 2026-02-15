@@ -144,7 +144,7 @@ class GPTModel(nn.Module):
             top_k: Top-K采样
             top_p: Top-P (nucleus) 采样
             eos_token_id: EOS token的ID，如果提供则会降低其概率避免过早结束
-            suppress_eos_steps: 在前N步抑制EOS token，默认为max_new_tokens-5
+            suppress_eos_steps: 在前N步抑制EOS token，默认前60%步数（策略一：便于自然收尾）
             suppress_punct_tokens: 标点符号token ID列表，用于抑制连续标点符号
         
         Returns:
@@ -152,9 +152,10 @@ class GPTModel(nn.Module):
         """
         self.eval()  # 设置为评估模式
         
-        # 如果没有指定suppress_eos_steps，默认在前90%的步数中抑制EOS
+        # 策略一：缩短 EOS 抑制期，默认前 60% 步数抑制 EOS，之后允许 EOS 以自然收尾
+        # @Author xiaomin.zhang
         if suppress_eos_steps is None:
-            suppress_eos_steps = max(int(max_new_tokens * 0.9), max_new_tokens - 5)
+            suppress_eos_steps = max(int(max_new_tokens * 0.6), max_new_tokens // 2)
         
         # 记录最近生成的token，用于检测连续标点符号
         recent_tokens = []
@@ -214,8 +215,14 @@ class GPTModel(nn.Module):
             # 采样下一个token
             next_token = torch.multinomial(probs, num_samples=1)  # (batch_size, 1)
             
+            # 策略一：遇 EOS 即停止，实现自然收尾
+            # @Author xiaomin.zhang
+            if eos_token_id is not None and (next_token == eos_token_id).any().item():
+                input_ids = torch.cat([input_ids, next_token], dim=1)
+                break
+            
             # 记录最近生成的token（用于下一轮检测）
-            next_token_id = next_token.item()
+            next_token_id = next_token.item() if next_token.size(0) == 1 else next_token[0].item()
             recent_tokens.append(next_token_id)
             if len(recent_tokens) > 5:  # 只保留最近5个token
                 recent_tokens.pop(0)

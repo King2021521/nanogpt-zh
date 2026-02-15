@@ -98,7 +98,7 @@ class PoetryTester:
                     top_k=top_k,
                     top_p=top_p,
                     eos_token_id=self.tokenizer.eos_id,  # 传入EOS token ID
-                    suppress_eos_steps=int(max_length * 0.9),  # 在前90%的步数中抑制EOS
+                    suppress_eos_steps=int(max_length * 0.6),  # 策略一：前60%步抑制EOS，遇EOS即停止
                     suppress_punct_tokens=punct_token_ids  # 传入标点符号ID列表
                 )
             
