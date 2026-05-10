@@ -1,256 +1,425 @@
 # NanoGPT-ZH
 
-<div align="center">
+从零实现的中文 GPT 诗词生成模型。当前主线已经从通用教学版 nanoGPT，推进到一个约 92.74M 参数的中文古诗词模型，并在本地完成了一轮面向“按要求创作”的指令微调。
 
-**从零手搓的中文GPT模型 | A Tiny GPT Implementation from Scratch for Chinese**
+本项目不依赖 Hugging Face `transformers` 训练框架，核心模型、注意力、Transformer Block、Tokenizer、训练循环和 SFT 数据管线都在仓库内实现，适合学习 Decoder-Only Transformer 的完整工程链路。
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## 当前状态
 
-</div>
+| 项目 | 结果 |
+| --- | --- |
+| 基座任务 | 中文古诗词自回归生成 |
+| 模型结构 | Decoder-Only Transformer / GPT |
+| 参数规模 | 92.74M |
+| 词表 | 字符级中文词表，约 9,837 个有效 token |
+| 最大上下文 | 128 token |
+| 预训练数据 | `data/processed/train.txt`，372,911 条 |
+| 预训练最佳模型 | `checkpoints/best_model.pt` |
+| 预训练最佳验证损失 | `3.8024`，global step `62000` |
+| SFT 数据 | `data/poetry_sft_v2_10000`，10,000 条 |
+| SFT 最佳模型 | `checkpoints_poetry_sft_v2/best_model.pt` |
+| SFT 最佳验证损失 | `2.8906`，global step `1800` |
+| 当前设备验证 | Apple M4 / MPS |
 
-## 项目简介
+说明：预训练损失和 SFT 损失来自不同数据与不同 label mask 方式，不能当作同一任务上的严格横向比较。SFT 损失更适合用于判断指令微调阶段是否收敛。
 
-**NanoGPT-ZH** 是一个从0到1手工实现的中文GPT文本生成模型，基于PyTorch和Transformer架构。这是一个教育性质的项目，目标是通过从零实现一个小型GPT模型（~7M参数），深入理解Transformer架构和深度学习的核心概念。
+## 背景
 
-**NanoGPT-ZH 特点：**
-- 🔧 **完全手工实现** - 不依赖transformers库，从零实现所有组件
-- 🎯 **小规模参数** - 默认7M参数，可在个人电脑训练
-- 🇨🇳 **中文优化** - 专为中文文本生成优化
-- 📚 **教育友好** - 代码清晰，注释详细，适合学习
-- ⚡ **完整流程** - 包含数据处理、训练、推理全流程
+最初版本的 NanoGPT-ZH 是一个小规模中文 GPT 教学项目，用来验证从数据处理、词表构建、模型实现到训练推理的完整流程。后续项目转向中文古诗词生成任务，原因是：
 
-## 项目结构
+- 古诗词文本结构短，适合小上下文模型训练和观察效果。
+- 字符级建模可以覆盖冷门字、古汉语用字和标点，不强依赖分词质量。
+- 诗词有较明确的体裁、主题、关键词约束，适合做从预训练到 SFT 的能力演进实验。
 
-```
-nanogpt-zh/
-├── models/                    # 模型定义
-│   ├── __init__.py
-│   ├── embedding.py           # 嵌入层和位置编码
-│   ├── attention.py           # 多头注意力机制
-│   ├── transformer.py         # Transformer Block
-│   └── gpt.py                 # 完整GPT模型
-├── utils/                     # 工具函数
-│   ├── __init__.py
-│   ├── tokenizer.py           # 中文分词器
-│   ├── data_loader.py         # 数据加载
-│   └── trainer.py             # 训练器
-├── scripts/                   # 脚本工具
-│   ├── extract_wiki.py        # 维基百科数据提取
-│   ├── prepare_data.py        # 数据准备脚本
-│   └── process_wiki_data.py   # 维基数据处理
-├── tests/                     # 测试脚本
-│   ├── test_model.py          # 模型测试
-│   ├── test_gpu.py            # GPU测试
-│   └── install_pytorch_gpu.py # GPU安装指南
-├── examples/                  # 示例代码
-│   └── inference.py           # 推理示例
-├── docs/                      # 文档
-│   ├── STORY.md               # 项目故事
-│   ├── DESIGN.md              # 设计文档
-│   ├── MODEL_PARAMETERS_GUIDE.md      # 模型参数说明
-│   ├── TRANSFORMER_ARCHITECTURE.md    # Transformer架构文档
-│   └── *.md                   # 其他文档
-├── data/                      # 数据目录
-│   ├── raw/                   # 原始数据
-│   └── processed/             # 处理后的数据
-├── checkpoints/               # 模型检查点
-├── logs/                      # 训练日志
-├── config.py                  # 配置文件
-├── train.py                   # 训练脚本
-├── requirements.txt           # 依赖列表
-├── .gitignore                 # Git忽略文件
-└── README.md                  # 本文件
+当前基座模型已经能生成古诗词风格文本，但原始预训练模型只学习“续写分布”，不天然理解“写一首七言绝句，包含某些字”这类显式要求。因此本轮新增了指令数据集生成与 SFT 训练流程，让模型学习“要求 -> 作品”的映射。
+
+## 算法核心
+
+模型是标准 GPT 风格的 Decoder-Only Transformer：
+
+```text
+token ids
+  -> token embedding
+  -> sinusoidal positional encoding
+  -> [Pre-LN Transformer Block] x 12
+  -> final layer norm
+  -> tied language modeling head
+  -> next-token logits
 ```
 
-## 快速开始
+核心组件：
 
-### 1. 环境准备
+- `models/attention.py`：多头自注意力和因果 mask。每个位置只能看到自己及之前的 token。
+- `models/transformer.py`：Pre-LN Transformer Block，结构为 `x + Attention(LN(x))` 和 `x + FFN(LN(x))`。
+- `models/gpt.py`：GPT 主模型，包含 embedding、位置编码、12 层 Transformer、最终 LayerNorm 和 LM Head。
+- `utils/tokenizer.py`：中文 Tokenizer。当前诗词词表会被检测为字符级词表，因此编码时按字符切分。
 
-```bash
-# 安装依赖
-pip install -r requirements.txt
+注意力公式：
+
+```text
+Attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V
 ```
 
-**推荐环境：**
-- Python 3.8+
-- PyTorch 2.0+
-- 8GB+ RAM
-- GPU（可选，但强烈推荐）
+训练目标：
 
-### 2. 数据准备
-
-```bash
-# 准备示例数据并构建词表
-python scripts/prepare_data.py
-
-# 或者使用维基百科数据
-python scripts/extract_wiki.py
+```text
+给定 x_1, x_2, ..., x_t
+最大化 P(x_{t+1} | x_1, ..., x_t)
 ```
 
-这会创建示例数据集。实际使用时，建议使用更大的数据集：
-- 中文维基百科
-- 新闻语料库
-- 小说、文章等
-
-### 3. 训练模型
-
-```bash
-# 开始训练
-python train.py
-```
-
-训练过程中会：
-- 自动保存检查点
-- 记录训练日志到TensorBoard
-- 定期在验证集上评估
-
-**查看训练日志：**
-```bash
-tensorboard --logdir=logs
-```
-
-### 4. 文本生成
-
-```bash
-# 交互式文本生成
-python examples/inference.py
-```
+也就是用交叉熵训练下一个 token 预测。`pad_id=0` 会在 loss 中被忽略。
 
 ## 模型配置
 
-主要超参数在 `config.py` 中配置：
+当前诗词模型配置在 `config_poetry.py`：
 
-```python
-# 模型架构
-vocab_size = 10000      # 词表大小
-d_model = 256           # 模型维度
-n_layers = 6            # Transformer层数
-n_heads = 8             # 注意力头数
-max_seq_len = 256       # 最大序列长度
+| 参数 | 值 |
+| --- | --- |
+| `vocab_size` | 10000 |
+| `max_seq_len` | 128 |
+| `d_model` | 768 |
+| `n_layers` | 12 |
+| `n_heads` | 12 |
+| `d_ff` | 3072 |
+| `dropout` | 0.1 |
+| `grad_clip` | 1.0 |
 
-# 训练参数
-batch_size = 32
-learning_rate = 3e-4
-max_epochs = 10
+实际初始化参数量：
+
+```text
+92.74M
 ```
 
-## 模型架构
+## 项目结构
 
-```
-输入文本
-    ↓
-Token Embedding
-    ↓
-Positional Encoding
-    ↓
-[Transformer Block] × N
-    ├── Multi-Head Attention
-    ├── Layer Normalization
-    ├── Feed Forward Network
-    └── Residual Connection
-    ↓
-Layer Normalization
-    ↓
-Language Model Head
-    ↓
-输出概率分布
-```
-
-## 核心组件
-
-### 1. 多头注意力机制
-```python
-Attention(Q, K, V) = softmax(QK^T / √d_k) V
+```text
+nanogpt-zh/
+├── models/                         # GPT、注意力、Transformer Block
+├── utils/                          # Tokenizer、DataLoader、Trainer
+├── scripts/
+│   ├── prepare_poetry_data.py       # 诗词数据处理
+│   ├── rebuild_vocab.py             # 字符级词表重建
+│   └── build_poetry_sft_dataset.py  # SFT 指令数据集生成
+├── data/
+│   ├── processed/                   # 预训练数据与词表
+│   └── poetry_sft_v2_10000/         # 本轮 SFT 数据集
+├── checkpoints/                     # 预训练模型
+├── checkpoints_poetry_sft_v2/       # 本轮 SFT 模型
+├── logs_poetry_sft_v2/              # TensorBoard 日志
+├── train_poetry.py                  # 诗词预训练入口
+├── train_poetry_sft.py              # 指令微调入口
+└── tests/                           # 单元测试和管线测试
 ```
 
-### 2. 位置编码
-使用正弦和余弦函数为序列位置编码：
-```python
-PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
-PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
-```
+## 环境准备
 
-### 3. 前馈网络
-```python
-FFN(x) = GELU(xW1 + b1)W2 + b2
-```
-
-## 训练技巧
-
-1. **学习率预热**：前1000步线性增长
-2. **余弦退火**：学习率逐渐衰减
-3. **梯度裁剪**：防止梯度爆炸
-4. **权重共享**：Token嵌入和输出层共享权重
-5. **Pre-LN**：在子层之前进行Layer Normalization
-
-## 性能优化
-
-- **混合精度训练**：使用torch.cuda.amp（如果有GPU）
-- **梯度累积**：模拟更大的batch size
-- **模型量化**：减少推理时的内存占用
-
-## 测试模型组件
+推荐使用当前已验证的 Conda 环境：
 
 ```bash
-# 测试模型组件
-python tests/test_model.py
+conda create -n nanogpt python=3.10 -y
+conda activate nanogpt
+pip install -r requirements.txt
+```
 
-# 测试GPU可用性
+在 Apple Silicon 上，PyTorch 使用 MPS；在 NVIDIA GPU 上会自动使用 CUDA。
+
+快速检查：
+
+```bash
+python tests/test_model.py
 python tests/test_gpu.py
 ```
 
-## 常见问题
+## 预训练过程
 
-### Q: 显存不足怎么办？
-A: 减小batch_size、d_model或n_layers，或使用梯度累积。
+预训练目标是让模型先学习中文古诗词的字符分布、句式、韵律和常见意象。数据来自本地处理后的诗词语料：
 
-### Q: 训练太慢怎么办？
-A: 使用GPU，或减小模型规模和数据量。
+```text
+data/processed/train.txt  372,911 条
+data/processed/val.txt      9,813 条
+data/processed/test.txt     9,814 条
+data/processed/vocab.json   字符级词表
+```
 
-### Q: 生成的文本质量不好？
-A: 增加训练数据量，延长训练时间，调整采样参数。
+数据准备流程：
 
-### Q: 如何使用自己的数据？
-A: 修改`scripts/prepare_data.py`，读取您的数据文件，然后运行数据准备流程。
+```bash
+conda activate nanogpt
+python scripts/prepare_poetry_data.py
+python scripts/rebuild_vocab.py
+```
 
-## 扩展方向
+启动预训练：
 
-- [ ] 支持更大的模型规模
-- [ ] 实现分布式训练
-- [ ] 添加更多采样策略
-- [ ] 支持微调（Fine-tuning）
-- [ ] 实现RLHF（人类反馈强化学习）
-- [ ] 添加Web界面（Gradio/Streamlit）
+```bash
+conda activate nanogpt
+python train_poetry.py
+```
 
-## 学习资源
+预训练训练器使用：
 
-- **论文**：Attention Is All You Need
-- **代码**：nanoGPT by Andrej Karpathy
-- **教程**：The Annotated Transformer
+- AdamW 优化器
+- warmup + cosine decay 学习率调度
+- 梯度裁剪
+- TensorBoard 日志
+- 定期验证与 checkpoint 保存
 
-## 项目灵感
+当前可用的预训练最佳模型：
 
-本项目受到以下优秀项目的启发：
-- [nanoGPT](https://github.com/karpathy/nanoGPT) by Andrej Karpathy
-- [The Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/)
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+```text
+checkpoints/best_model.pt
+epoch: 7
+global_step: 62000
+best_val_loss: 3.8024
+```
 
-## 作者
+这个模型可以生成诗词风格文本，但它没有经过指令对齐，对“指定体裁、主题、关键词”的遵循不稳定。
 
-@Author xiaomin.zhang
+## SFT 数据集
+
+本轮重新生成了 `poetry-sft-v2-10000`，用于让模型学习按创作要求输出诗词。
+
+生成命令：
+
+```bash
+conda activate nanogpt
+PYTHONPATH=. python scripts/build_poetry_sft_dataset.py \
+  --input data/processed/train.txt \
+  --output_dir data/poetry_sft_v2_10000 \
+  --total 10000 \
+  --seed 43 \
+  --max_samples_per_poem 6 \
+  --reservoir_cap_per_group 5000
+```
+
+数据规模：
+
+| split | 样本数 |
+| --- | ---: |
+| train | 9000 |
+| val | 500 |
+| test | 500 |
+
+指令类型分布：
+
+| 类型 | 数量 | 目的 |
+| --- | ---: | --- |
+| `keyword` | 3500 | 强化包含指定字词 |
+| `combined` | 3000 | 同时约束体裁、主题、关键词 |
+| `theme` | 2000 | 强化主题创作 |
+| `basic` | 1000 | 基础体裁创作 |
+| `season` | 500 | 季节类主题 |
+
+体裁分布：
+
+| 体裁 | 数量 |
+| --- | ---: |
+| 七言绝句 | 3250 |
+| 五言绝句 | 3247 |
+| 五言律诗 | 3249 |
+| 七言律诗 | 254 |
+
+数据质量统计：
+
+```text
+candidate_samples: 75358
+unique_instruction_count: 2423
+unique_output_count: 9627
+duplicate_output_count: 373
+constraint_errors: 0
+```
+
+SFT 文本格式很紧凑，以适配当前 `max_seq_len=128`：
+
+```text
+要求：写一首七言绝句，包含“山”、“水”。
+作品：万树山河古战场，天生壮士一杯觞。...
+```
+
+训练时会 mask 掉 prompt 部分，只在 `作品：` 之后的输出 token 上计算 loss。
+
+## SFT 训练过程
+
+SFT 从预训练最佳模型继续训练：
+
+```bash
+conda activate nanogpt
+PYTHONPATH=. PYTHONUNBUFFERED=1 python -u train_poetry_sft.py \
+  --train_file data/poetry_sft_v2_10000/train.jsonl \
+  --val_file data/poetry_sft_v2_10000/val.jsonl \
+  --init_checkpoint checkpoints/best_model.pt \
+  --output_dir checkpoints_poetry_sft_v2 \
+  --log_dir logs_poetry_sft_v2 \
+  --epochs 5 \
+  --batch_size 8 \
+  --gradient_accumulation_steps 2 \
+  --learning_rate 3e-5 \
+  --weight_decay 0.01 \
+  --eval_interval 100 \
+  --save_interval 1000 \
+  --log_interval 20 \
+  --early_stopping_patience 2 \
+  --early_stopping_min_delta 0.002
+```
+
+本轮训练设备：
+
+```text
+Apple M4 GPU via PyTorch MPS
+16GB unified memory
+```
+
+训练结果：
+
+```text
+steps: 1800
+best_val_loss: 2.8906
+elapsed: 47.9 minutes
+best checkpoint: checkpoints_poetry_sft_v2/best_model.pt
+final checkpoint: checkpoints_poetry_sft_v2/final_model.pt
+```
+
+验证损失走势摘要：
+
+| step | val loss |
+| ---: | ---: |
+| 100 | 3.6487 |
+| 200 | 3.2166 |
+| 500 | 3.0121 |
+| epoch 1 | 2.9989 |
+| 1000 | 2.9357 |
+| epoch 2 | 2.9251 |
+| 1400 | 2.9065 |
+| epoch 3 | 2.8922 |
+| 1800 | 2.8906 |
+
+第 4 轮 step 1800 触发 early stopping。日志里 `early_stop_best` 使用 `min_delta=0.002` 判定有效改善，checkpoint 则保存严格最小的 `checkpoint_best=2.8906`。
+
+## 推理测试结果
+
+本轮 SFT 后，用 `checkpoints_poetry_sft_v2/best_model.pt` 做了指令生成测试。
+
+测试参数：
+
+```text
+temperature: 0.82
+top_k: 50
+top_p: 0.9
+max_new_tokens: 84
+```
+
+样例 1：
+
+```text
+要求：写一首七言绝句，包含“山”、“水”。
+输出：万树山河古战场，天生壮士一杯觞。至今海上无风雨，不知何处是金堂。
+检查：山=True，水=False
+```
+
+样例 2：
+
+```text
+要求：写一首五言绝句，包含“月”、“江”。
+输出：南州古驿边，一望一悠然。夜月江边水，秋风树杪船。
+检查：月=True，江=True
+```
+
+样例 3：
+
+```text
+要求：以“离别”为主题，写一首七言绝句。
+输出：四海干戈满，一身天地老风埃。不须辛苦学张翰，自是英雄已是才。
+```
+
+样例 4：
+
+```text
+要求：写一首关于春天的五言绝句。
+输出：江山千古意，花木一时春。我亦江湖客，江南问水滨。
+```
+
+样例 5：
+
+```text
+要求：写一首七言律诗，包含“风”、“花”。
+输出：幽禽啄叶鸣桑柘，日暮村村花乱开。雨后园林芳草遍，风前林木亦花来。行人莫道春无计，不是风光不是才。不是天公留意久，却缘风雨为花催。
+检查：风=True，花=True
+```
+
+结论：
+
+- 指令跟随能力较预训练模型明显增强。
+- 关键词约束已有改善，但还不是 100% 可靠。
+- 体裁和主题大体能跟随，但个别输出仍有句式混乱或字数不严的问题。
+- 当前模型适合作为“小参数诗词指令模型”的实验基线，不应视为稳定的对话模型。
+
+如果要进一步提高可控生成质量，下一步更有效的是在推理侧增加多候选采样、关键词检查、体裁检查和重排；训练侧可以继续补强七言律诗、严格格律样本和失败样本反例。
+
+## 验证命令
+
+本轮修改后通过了以下检查：
+
+```bash
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python tests/test_poetry_sft_pipeline.py
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python -m py_compile scripts/build_poetry_sft_dataset.py train_poetry_sft.py tests/test_poetry_sft_pipeline.py
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python tests/test_model.py
+```
+
+结果：
+
+```text
+tests/test_poetry_sft_pipeline.py: 4 tests OK
+py_compile: OK
+tests/test_model.py: all tests passed
+```
+
+## 常用命令
+
+查看 TensorBoard：
+
+```bash
+tensorboard --logdir logs_poetry_sft_v2
+```
+
+查看 checkpoint 元信息：
+
+```bash
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python - <<'PY'
+import torch
+
+for path in ["checkpoints/best_model.pt", "checkpoints_poetry_sft_v2/best_model.pt"]:
+    ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    print(path)
+    print("  epoch:", ckpt.get("epoch"))
+    print("  global_step:", ckpt.get("global_step"))
+    print("  best_val_loss:", ckpt.get("best_val_loss"))
+PY
+```
+
+重新生成 SFT 数据：
+
+```bash
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python scripts/build_poetry_sft_dataset.py
+```
+
+重新运行 SFT：
+
+```bash
+conda run --no-capture-output -n nanogpt env PYTHONPATH=. python -u train_poetry_sft.py
+```
+
+## 已知限制
+
+- 当前上下文只有 128 token，复杂长指令和长诗会受限制。
+- SFT 数据来自已有诗词样本重组，模型更像“按约束仿写古诗”，不是开放域聊天助手。
+- 对关键词、字数、格律的遵循仍需推理后处理或更强的约束训练。
+- 七言律诗样本较少，相关能力弱于绝句和五言律诗。
+- Apple MPS 可完成训练，但吞吐明显低于中高端 NVIDIA GPU。
 
 ## 许可证
 
 MIT License
 
-## Star History
+## 作者
 
-如果这个项目对您有帮助，欢迎给个 ⭐️ Star！
-
----
-
-<div align="center">
-Made with ❤️ by xiaomin.zhang | NanoGPT-ZH © 2026
-</div>
+@Author xiaomin.zhang

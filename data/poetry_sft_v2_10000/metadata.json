@@ -1,0 +1,49 @@
+{
+  "dataset_name": "poetry-sft-v2-10000",
+  "description": "Constraint-heavy compact instruction tuning dataset generated from local processed poetry corpus.",
+  "total_samples": 10000,
+  "train_samples": 9000,
+  "val_samples": 500,
+  "test_samples": 500,
+  "seed": 43,
+  "max_samples_per_poem": 6,
+  "reservoir_cap_per_group": 5000,
+  "candidate_samples": 75358,
+  "input_files": [
+    "data/processed/train.txt"
+  ],
+  "format": {
+    "instruction": "创作要求",
+    "input": "保留标准字段，当前为空",
+    "output": "换行后的诗词文本",
+    "metadata": "体裁、标签、来源和质量约束"
+  },
+  "poem_type_distribution": {
+    "七言绝句": 3250,
+    "五言绝句": 3247,
+    "五言律诗": 3249,
+    "七言律诗": 254
+  },
+  "instruction_type_distribution": {
+    "basic": 1000,
+    "theme": 2000,
+    "combined": 3000,
+    "keyword": 3500,
+    "season": 500
+  },
+  "theme_distribution": {
+    "": 3259,
+    "月夜": 2353,
+    "离别": 655,
+    "饮酒": 705,
+    "山水": 1864,
+    "花草": 682,
+    "思乡": 217,
+    "田园": 67,
+    "边塞": 131,
+    "怀古": 67
+  },
+  "unique_instruction_count": 2423,
+  "unique_output_count": 9627,
+  "duplicate_output_count": 373
+}

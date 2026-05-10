@@ -45,6 +45,11 @@ checkpoints/*.pth
 checkpoints/*.ckpt
 !checkpoints/.gitkeep
 
+# Fine-tuning artifacts
+checkpoints_poetry_sft*/
+logs_poetry_sft*/
+data/poetry_sft_3000/
+
 # Logs
 logs/
 *.log
